@@ -1,0 +1,126 @@
+---
+title: "UVapp Documentation"
+author: "A. Nugent, Coursera data-products"
+date: "28 January 2016"
+output: pdf_document
+---
+
+# Description
+
+'UVapp' is an interactive, web-based application for indicating maximum safe exposure times to solar UV radiation. 
+Users can select various inputs, including skin type and UN index, and see the output as a pie-chart widget with 
+a caption that displays the estimated time to onset of sunburn.
+
+# Background
+
+Sunburn is caused by prolonged exposure to UV. 
+The duration of safe exposure before onset of reddening of the skin (erythema) depends on skin type 
+as well as the intensity of ambient UV ("UV index"). 
+Reflection from surfaces in the natural environs can augment the amount UV reaching the skin,
+so that burning occurs sooner.
+
+Many public information services now routinely provide daily forecasts of the UV index. Some wearable 
+devices now measure it directly (e.g. Microsoft Band, Samsung Gear S). 
+However, most people do not know how to convert this data into personal guidelines 
+for safe sun exposure.
+
+# Usage
+
+User inputs are found in the sidebar on the left of the application web page. 
+The "UV index" slider is used to select a value between 2 and 12.
+The "Environs" drop-down is used to select the natural surface (grass, soil, sand, water, or snow) 
+that dominates the user's surroundings. 
+The "Skin Type" drop-down is used to select the user's skin type (I, II, III, IV), 
+with reference to the table shown below the input controls.
+  
+The caption, which gives the estimated time to onset of sunburn, 
+and the 'clock', which shows the safe exposure time in green, 
+a 20% margin of error in yellow,
+and overexposure in red, are both updated in response to user input.
+
+## Remarks on Usage
+
+Users should note that safe exposure time is indicative only. Skin typing is a rough approximation, 
+and the biological effects of UV cannot be modelled exactly. 
+Furthermore, the data upon which the model was based originated from a European population,
+and it is not obvious how skin types in Asian or African populations, for example, 
+would correlate.
+
+# Details
+
+## Data
+
+The raw data source was a published chart depicting erythema time versus UV index for 
+the four skin types, published by the European Union 
+(Ref:  UV-Index for the Public -- A guide for publication and interpretation of solar 
+UV Index forecasts for the public prepared by the Working Group 4 of the COST-713 Action 
+"UVB Forecasting". Karel Vanicek, Thomas Frei, Zenobia Litynska, Alois Schmalwieser. 
+COST-713 Action, Brussels, 1999). The curves were scanned and digitised (using DigitizeIt), then read into R.
+
+```{r, echo=FALSE}
+# Populate lookup tables ...
+skin.types <- data.frame(skin.type = c("I", "II", "III", "IV"), 
+                         series.colour = c("yellow", "orange", "dark orange", "brown"),
+                         hair.colour = c("red", "blond", "brown", "black"),
+                         tan = c("never", "sometimes", "always", "always"),
+                         burn = c("always", "sometimes", "rarely", "never"))
+write.csv(skin.types, "skin_type_lookup.csv")
+skin.types$series.colour.rgb <- c("#FFFF00", "#FF8000", "#CC6600", "#994C00")
+
+# Get input data for modelling ...
+folder.data <- "data"
+sunburn.dat <- list()
+for (i in 1:4)
+{
+    dat.in <- read.table(paste0(folder.data, "/", "SkinType", i, ".txt"), 
+                         skip = 1, col.names = c("rownum", "UV.index", "Onset.minutes"))
+    sunburn.dat[[i]] <- dat.in[order(dat.in$UV.index), 2:3]
+}
+
+# Apply linear model to logarithms of input data points ...
+sunburn.mod <- lapply(sunburn.dat, lm, formula = log(Onset.minutes) ~ log(UV.index))
+```
+
+## Model
+
+For each skin type, an approximating function was fitted to the data points to as to obtain a smooth line, 
+by fitting a linear model to the logarithms of both the UV index and the time data. 
+This enabled each skin type to be represented by an equation of the form
+$y = a x ^{b}$
+where _x_ = UV index, _y_ = time to onset of sunburn (minutes), and _a_, _b_ (_a_ > 0, _b_ < 0) 
+were the results of the modelling (and were different for each skin type).
+The following chart shows the original data as points with the fitted curves as coloured lines.
+
+```{r, echo=FALSE}
+onset <- function(UV.index, modFit)
+{
+    result <- exp(modFit$coef[1]) * UV.index ^ modFit$coef[2]
+    return(result)
+}
+
+plot(c(1,12), c(0, 160), type = "n", xlab = "UV index", ylab = "Time to Sunburn (minutes)",
+     main = "Onset of Sunburn vs. UV Index and Skin Type")
+for (i in 1:4)
+{
+    x <- seq(2, 12, by = 0.1)
+    y <- onset(x, sunburn.mod[[i]])
+    lines(x, y, col = skin.types$series.colour.rgb[i], lwd = 3)
+    with(sunburn.dat[[i]], points(x = UV.index, y = Onset.minutes, cex = 0.5))
+}
+legend("topright", title = "  Skin Type  ", legend = skin.types$skin.type, col = skin.types$series.colour.rgb, lwd = 3)
+```
+
+
+The reference publication also included a mention of UV transmittance and reflectance factors for various 
+natural surfaces, ranging from 10% (soil) to 80% (fresh snow). 
+These are used to augment the input value of UV index before obtaining the onset time from the model. 
+This 'correction' is arguably crude, but it does provide an additional safety factor.
+
+# Output
+
+Although the displayed value of estimated time to onset of sunburn is sufficient for the user's 
+risk-mitigation planning, graphical output was included for visual impact. Using a clock 
+symbol and scaling the onset time to 12 hours results in most of the dial being red, emphasising the 
+narrow window of safe exposure. It is hoped that this will promote conscientious use of sun-proof clothing and sunscreen.
+
+

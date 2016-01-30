@@ -1,0 +1,89 @@
+UVapp
+========================================================
+author: Allen Nugent
+date: 28 January, 2016
+  
+A simple applicaton for estimating safe limits of sun exposure.
+
+
+Skin Damage and Ultraviolet Radiation
+========================================================
+
+UV radiation:
+
+- UV-A causes sunburn, deep tissue damage, skin ageing
+- UV-B causes sunburn and skin cancers
+- Tanning provides limited protection against sunburn _only_
+
+What is "UV index"?
+
+- quantifies 'net' amount of UV-A/B at Earth's surface
+- figures are published by news media 
+- measured by some wearables (e.g. Microsoft Band, Samsung Gear Fit S)
+
+_Challenge:  How to use UV index to avoid sunburn?_
+
+
+Sunburn vs. Skin Type
+========================================================
+
+```{r, echo=FALSE}
+folder.data <- "data"
+sunburn.dat <- list()
+for (i in 1:4)
+{
+    dat.in <- read.table(paste0(folder.data, "/", "SkinType", i, ".txt"), 
+                         skip = 1, 
+                         col.names = c("rownum", "UV.index", "Onset.minutes"))
+    sunburn.dat[[i]] <- dat.in[order(dat.in$UV.index), 2:3]
+}
+
+sunburn.mod <- lapply(sunburn.dat, lm, formula = log(Onset.minutes) ~ log(UV.index))
+
+skin.types <- data.frame(skin.type = c("I", "II", "III", "IV"), 
+                         series.colour = c("yellow", "orange", "dark orange", "brown"),
+                         hair.colour = c("red", "blond", "brown", "black"),
+                         tan = c("never", "sometimes", "always", "always"),
+                         burn = c("always", "sometimes", "rarely", "never"))
+skin.types$series.colour.rgb <- c("#FFFF00", "#FF8000", "#CC6600", "#994C00")
+
+onset <- function(UV.index, modFit)
+{
+    result <- exp(modFit$coef[1]) * UV.index ^ modFit$coef[2]
+    return(result)
+}
+
+plot(c(1,12), c(0, 160), type = "n", xlab = "UV index", ylab = "Time to Sunburn (minutes)",
+     main = "Onset of Sunburn vs. UV Index and Skin Type")
+for (i in 1:4)
+{
+    x <- seq(2, 12, by = 0.1)
+    y <- onset(x, sunburn.mod[[i]])
+    lines(x, y, col = skin.types$series.colour.rgb[i], lwd = 3)
+
+    with(sunburn.dat[[i]], points(x = UV.index, y = Onset.minutes))
+}
+legend("topright", title = "  Skin Types  ", legend = skin.types$skin.type, col = skin.types$series.colour.rgb, lwd = 3)
+```
+
+
+UV Reflection from Environs 
+========================================================
+
+UA exposure is augmented by natural surfaces that reflect incident radiation
+
+- soil: up to 10%
+- grass: up to 20% (40% when wet)
+- sand: up to 25%
+- water: up to 50%
+- snow: up to 80%
+
+
+What UVapp Does
+========================================================
+
+Estimate your safe exposure limit:
+![UVapp screenshot](www/screenshot.png)
+
+  _... and don't forget the suncreen!_
+
