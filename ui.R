@@ -60,7 +60,7 @@ shinyUI(
 
         wellPanel(
             
-            helpText(a("Click to view documentation", href="UVapp_doco.pdf"))
+            helpText(a("Click to view documentation", href="https://github.com/ahnugent/data-products/blob/master/UVapp_doco.pdf"))
         )
     )
 )

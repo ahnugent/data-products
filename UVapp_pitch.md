@@ -39,7 +39,7 @@ UA exposure is augmented by natural surfaces that reflect incident radiation
 - grass: up to 20% (40% when wet)
 - sand: up to 25%
 - water: up to 50%
-- snow: up to 80%
+- fresh snow: up to 80%
 
 
 What UVapp Does
@@ -48,5 +48,5 @@ What UVapp Does
 Estimate your safe exposure limit:
 ![UVapp screenshot](www/screenshot.png)
 
-  _... and don't forget the suncreen!_
+... and don't forget the suncreen!   [_(Click to view documentation)_](https://github.com/ahnugent/data-products/blob/master/UVapp_doco.pdf)
 
